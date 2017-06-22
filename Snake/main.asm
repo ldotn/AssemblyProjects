@@ -12,7 +12,11 @@ start:
 	mov ah, 00h
 	mov al, 13h
 	int 10h
-
+	
+	mov ah,02h
+	int 1Ah
+	mov dh,[104] ; store prev time (seconds)
+	
 	mov cx,160
 	mov dx,120
 	mov ah,0Ch
@@ -21,12 +25,24 @@ start:
 
 	mov bx,0; 13h video mode doesn't have pages, so the bx register is free for use
 	
+	mov word [100],0 ; x direction
+	mov word [102],1 ; y direction
+	
 	.keyloop:
+		push dx
+		
+		.waitloop:
+			mov ah,02h
+			int 1Ah
+			cmp dh,[104] ; check if the seconds changed since last call (busy waiting)
+			je .waitloop
+			
+		mov [104], dh ; update stored time
+		pop dx
+		
 		mov ah,00h
 		mov al,0
 		int 16h
-		cmp al,0
-		je .keyloop
 		
 		cmp al,'w'
 		je .up
@@ -36,21 +52,39 @@ start:
 		je .down
 		cmp al,'d'
 		je .right
-		jmp .keyloop
+		jmp .print ; the user pressed any other key or nothing at all
 		
 		.up:
-			dec dx
+			mov word [100],0
+			mov word [102],1
 			jmp .print
 		.left:
-			dec cx
+			mov word [100],-1
+			mov word [102],0
 			jmp .print
 		.right:
-			inc cx
+			mov word [100],1
+			mov word [102],0
 			jmp .print
 		.down:
-			inc dx
+			mov word [100],0
+			mov word [102],-1
 			jmp .print
+		;hay que realizar un movimiento por segundo (capaz hacerlo mas rapido cada vez que comes), independiente de la entrada. Las teclas solo marcan la direccion
+		
+		;en cada paso agarras la direccion, se la sumas a la posicion actual, la metes en el vector en el indice actual, le sumas uno al indice y tomas mod el largo
+		;eso se guarda en memoria
+		;para hacerlo mas facil y rapido, el largo solo son potencias de dos
+		
+		;despues de actualizar el vector de posiciones, se recorre el vector y se imprimien los pixels de las posiciones del vector
+		
+		;cada vez que pasas por un lugar marcado (comida) incrementas en uno un contador, y los puntos. cuando el contador llega al doble del largo, cambias el largo por ese , lo que hace crecer el vector
+		
 		.print:
+			; Update position
+			add cx,[100]
+			add dx,[102]
+			
 			mov ah,0Dh
 			int 10h
 			cmp al,0
@@ -71,10 +105,10 @@ start:
 			mov ah,0Ch
 			int 10h
 		
-		inc bx
-		cmp bx,1000
-		je .win
-		call printscore
+		;inc bx
+		;cmp bx,1000
+		;je .win
+		;call printscore
 	jmp .keyloop
 	
 .gamereset:
@@ -159,7 +193,6 @@ printscore:
 	mov bh,0
 	mov ah,02h ; reset cursor
 	int 10h
-	;pop dx
 	
 	mov ax,bx
 	mov bl,10

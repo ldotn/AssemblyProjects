@@ -1,0 +1,1 @@
+bash -c "./compile.sh main"
