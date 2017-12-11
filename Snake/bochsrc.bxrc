@@ -3,8 +3,8 @@ plugin_ctrl: unmapped=1, biosdev=1, speaker=1, extfpuirq=1, parallel=1, serial=1
 config_interface: win32config
 display_library: win32, options="gui_debug"
 memory: host=32, guest=32
-romimage: file="C:\Program Files (x86)\Bochs-2.6.8/BIOS-bochs-latest"
-vgaromimage: file="C:\Program Files (x86)\Bochs-2.6.8/VGABIOS-lgpl-latest"
+romimage: file="D:\Tools\bochs-2.6.8-msvc-src\bochs-2.6.8\bios\BIOS-bochs-latest"
+vgaromimage: file="D:\Tools\bochs-2.6.8-msvc-src\bochs-2.6.8\bios\VGABIOS-lgpl-latest"
 boot: floppy
 floppy_bootsig_check: disabled=0
 floppya: type=1_44, 1_44="D:\Documents\AssemblyProjects\Snake\compiled\main.flp", status=inserted, write_protected=0
