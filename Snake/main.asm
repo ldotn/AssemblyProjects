@@ -1,5 +1,4 @@
 	BITS 16
-
 start:
 	mov ax, 07C0h		; Set up 4K stack space after this bootloader
 	add ax, 288		; (4096 + 512) / 16 bytes per paragraph
@@ -8,6 +7,7 @@ start:
 
 	mov ax, 07C0h		; Set data segment to where we're loaded
 	mov ds, ax
+
 .gamestart:
 	mov ah, 00h
 	mov al, 13h
@@ -27,7 +27,64 @@ start:
 		int 16h
 		cmp al,0
 		je .keyloop
+
+		; print mines or boosters
+		; using an xor-shift RNG
+		push ax
+		mov ax,[0]
+		call rng
+		mov [0],ax
 		
+		mov ax,[2]
+		call rng
+		mov [2],ax
+
+		push dx
+		push cx
+		mov dx,[0]
+		mov cx,[2]
+
+		; randomly select between boosters and mines
+		; p = 1/8 of booster
+		mov ax, [5]
+		call rng
+		mov [5], ax
+		and al, 7
+		mov ah,0Ch
+		jz .booster
+		
+		.mine:
+			mov al,04
+			int 10h
+			inc cx
+			inc dx
+			int 10h
+			sub dx,2
+			int 10h
+			sub cx,2
+			int 10h
+			add dx,2
+			int 10h
+			jmp .itemclean
+		.booster:
+			; have the center of a different color, to prevent using the same booster multiple times
+			mov al,2fh 
+			int 10h
+			mov al,33h
+			inc cx
+			int 10h
+			sub cx,2
+			int 10h
+			dec dx
+			inc cx
+			int 10h
+			add dx,2
+			int 10h
+		.itemclean:
+			pop cx
+			pop dx
+			pop ax
+
 		cmp al,'w'
 		je .up
 		cmp al,'a'
@@ -37,7 +94,7 @@ start:
 		cmp al,'d'
 		je .right
 		jmp .keyloop
-		
+
 		.up:
 			dec dx
 			jmp .print
@@ -49,40 +106,56 @@ start:
 			jmp .print
 		.down:
 			inc dx
-			jmp .print
 		.print:
 			mov ah,0Dh
 			int 10h
+			cmp al,2fh ; check if it hit the center of a booster by checking the color
+			je .boostscore
+			cmp al,33h ; ignore the corners of a boosterr
+			je .printsnake
 			cmp al,0
 			jne .lost
-		
-			push cx ; change color based on second / 8
-			push dx
-			mov ah,02h
-			int 1Ah
-			mov al,dh
-			shr al,1
-			shr al,1
-			shr al,1
-			inc al ; prevent black
-			pop dx
-			pop cx
-			
-			mov ah,0Ch
-			int 10h
-		
+			jmp .printsnake
+
+			.boostscore:
+				add bx, 32 ; hit a booster, so increase score
+
+			.printsnake:
+				; change color based on second / 8
+				push cx 
+				push dx
+				mov ah,02h
+				int 1Ah
+				mov al,dh
+				shr al,3
+				add al,50h ; change color line on the palette http://www.fountainware.com/EXPL/vga_color_palettes.htm
+				pop dx
+				pop cx
+				mov ah,0Ch
+				int 10h
+
+		inc byte [4]
+		push bx
+		mov bl, byte [4]
+		and bl, 15
+		pop bx
+		jnz .wincheck
+
 		inc bx
-		cmp bx,1000
-		je .win
+		.wincheck:
+			cmp bx,250
+			jge .win
 		call printscore
 	jmp .keyloop
-	
+
 .gamereset:
 	mov bl, 12
 	mov ah, 0Eh
 	mov al,13
 	int 10h
-	
+	mov al,0Ah ;new line
+	int 10h
+
 	mov ah,02h
 	int 1Ah
 	mov bl,0
@@ -90,7 +163,7 @@ start:
 	.rloop:
 		mov ah,02h
 		int 1Ah
-		cmp bl,5
+		cmp bl,10
 		jg .gamestart
 		cmp dh,bh
 		mov bh,dh
@@ -108,6 +181,7 @@ start:
 	mov ah, 0Eh
 	mov al,13
 	int 10h
+
 	mov al,'Y'
 	int 10h
 	mov al,'o'
@@ -131,6 +205,7 @@ start:
 	mov ah, 0Eh
 	mov al,13
 	int 10h
+	
 	mov al,'Y'
 	int 10h
 	mov al,'o'
@@ -150,7 +225,7 @@ start:
 	mov al,'!'
 	int 10h
 	jmp .gamereset
-	
+
 printscore:
 	push dx
 	push bx
@@ -209,6 +284,18 @@ printscore:
 	pop bx
 	pop dx
 	ret
-	
-	times 510-($-$$) db 0	; Pad remainder of boot sector with 0s
-	dw 0xAA55		; The standard PC boot signature
+
+    ;won_string db 'You Won!',0
+rng:
+	shl ax,5
+	xor ax,[2]
+	mov [2],ax
+	shr ax,3
+	xor ax,[2]
+	mov [2],ax
+	shl ax,1
+	xor ax,[2]
+	ret
+
+times 510-($-$$) db 0	; Pad remainder of boot sector with 0s
+dw 0xAA55		; The standard PC boot signature
