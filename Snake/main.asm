@@ -19,11 +19,10 @@ start:
 	mov al,12
 	int 10h
 
-	mov bx,0; 13h video mode doesn't have pages, so the bx register is free for use
+	xor bx,bx; 13h video mode doesn't have pages, so the bx register is free for use
 	
 	.keyloop:
-		mov ah,00h
-		mov al,0
+		xor ax,ax
 		int 16h
 		cmp al,0
 		je .keyloop
@@ -31,16 +30,28 @@ start:
 		; print mines or boosters
 		; using an xor-shift RNG
 		push ax
+		push dx
+		push cx
+		push bx
+
 		mov ax,[0]
 		call rng
+		; make sure the values stay inside the screen
+		xor dx,dx
+		mov bx, 200
+		div bx
+		mov ax,dx
 		mov [0],ax
 		
 		mov ax,[2]
 		call rng
+		xor dx,dx
+		mov bx, 320
+		div bx
+		mov ax,dx
 		mov [2],ax
-
-		push dx
-		push cx
+		
+		pop bx
 		mov dx,[0]
 		mov cx,[2]
 
@@ -158,7 +169,7 @@ start:
 
 	mov ah,02h
 	int 1Ah
-	mov bl,0
+	xor bl,bl
 	mov bh,dh
 	.rloop:
 		mov ah,02h
@@ -230,8 +241,8 @@ printscore:
 	push dx
 	push bx
 	
-	mov dx,0
-	mov bh,0
+	xor dx,dx
+	xor bh,bh
 	mov ah,02h ; reset cursor
 	int 10h
 	;pop dx
@@ -241,26 +252,15 @@ printscore:
 	
 	div bl
 	push ax
-	mov ah,0
+	xor ah,ah
 	div bl
 	push ax
-	mov ah,0
+	xor ah,ah
 	div bl
 	push ax
-	mov ah,0
-	div bl
-	push ax
-	mov ah,0
 	
-	mov bh,0
+	xor bh,bh
 	mov bl,12
-	
-	pop ax
-	mov al,ah
-	add al,48
-	mov ah,0Eh
-	int 10h
-	mov dx,0
 	
 	pop ax
 	mov al,ah
