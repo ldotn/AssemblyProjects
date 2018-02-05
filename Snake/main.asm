@@ -9,6 +9,9 @@ start:
 	mov ds, ax
 
 .gamestart:
+	; set seed
+	call setseed
+	
 	mov ah, 00h
 	mov al, 13h
 	int 10h
@@ -20,7 +23,7 @@ start:
 	int 10h
 
 	xor bx,bx; 13h video mode doesn't have pages, so the bx register is free for use
-	
+
 	.keyloop:
 		xor ax,ax
 		int 16h
@@ -34,32 +37,22 @@ start:
 		push cx
 		push bx
 
-		mov ax,[0]
-		call rng
+		call rng ; returns in ax register
 		; make sure the values stay inside the screen
-		xor dx,dx
-		mov bx, 200
-		div bx
-		mov ax,dx
-		mov [0],ax
-		
-		mov ax,[2]
-		call rng
 		xor dx,dx
 		mov bx, 320
 		div bx
-		mov ax,dx
-		mov [2],ax
+		mov cx,dx
+
+		call rng
+		xor dx,dx
+		mov bx, 200
+		div bx
 		
 		pop bx
-		mov dx,[0]
-		mov cx,[2]
-
 		; randomly select between boosters and mines
 		; p = 1/8 of booster
-		mov ax, [5]
 		call rng
-		mov [5], ax
 		and al, 7
 		mov ah,0Ch
 		jz .booster
@@ -285,14 +278,35 @@ printscore:
 	pop dx
 	ret
 rng:
+	push bx
+	mov ax,[0]
+
+	mov bx,ax
 	shl ax,5
-	xor ax,[2]
-	mov [2],ax
+	xor ax,bx
+
+	mov bx,ax
 	shr ax,3
-	xor ax,[2]
-	mov [2],ax
+	xor ax,bx
+
+	mov bx,ax
 	shl ax,1
-	xor ax,[2]
+	xor ax,bx
+	
+	mov [0],ax
+	pop bx
+	ret
+
+; not storing the registers to make the code fit
+; that makes this function quite dangerous if called without care for the registers values
+setseed:
+	mov ah,02h
+
+	int 1Ah ; get time
+	mov al,dh ; seconds
+	add ax,cx ; hours:minutes
+	mov [0],ax
+
 	ret
 
 times 510-($-$$) db 0	; Pad remainder of boot sector with 0s
