@@ -9,9 +9,6 @@ start:
 	mov ds, ax
 
 .gamestart:
-	; set seed
-	call setseed
-	
 	mov ah, 00h
 	mov al, 13h
 	int 10h
@@ -23,6 +20,8 @@ start:
 	int 10h
 
 	xor bx,bx; 13h video mode doesn't have pages, so the bx register is free for use
+
+	call setseed
 
 	.keyloop:
 		xor ax,ax
@@ -297,9 +296,11 @@ rng:
 	pop bx
 	ret
 
-; not storing the registers to make the code fit
-; that makes this function quite dangerous if called without care for the registers values
 setseed:
+	push bx
+	push cx
+	push dx
+
 	mov ah,02h
 
 	int 1Ah ; get time
@@ -307,6 +308,9 @@ setseed:
 	add ax,cx ; hours:minutes
 	mov [0],ax
 
+	pop dx
+	pop cx
+	pop bx
 	ret
 
 times 510-($-$$) db 0	; Pad remainder of boot sector with 0s
