@@ -129,7 +129,7 @@ start:
 			jmp .printsnake
 
 			.boostscore:
-				add bx, 32 ; hit a booster, so increase score
+				add bx, 50 ; hit a booster, so increase score
 
 			.printsnake:
 				; change color based on second / 8
@@ -148,13 +148,13 @@ start:
 		inc byte [4]
 		push bx
 		mov bl, byte [4]
-		and bl, 15
+		and bl, 3 ; = bl % 4
 		pop bx
 		jnz .wincheck
 
 		inc bx
 		.wincheck:
-			cmp bx,250
+			cmp bx,900
 			jge .win
 		call printscore
 	jmp .keyloop
@@ -239,15 +239,17 @@ start:
 
 printscore:
 	push dx
+	push ax
 	push bx
-	
+
 	xor dx,dx
 	xor bh,bh
 	mov ah,02h ; reset cursor
 	int 10h
-	;pop dx
 	
+	pop bx
 	mov ax,bx
+	push bx
 	mov bl,10
 	
 	div bl
@@ -257,12 +259,10 @@ printscore:
 	push ax
 	xor ah,ah
 	div bl
-	push ax
 	
 	xor bh,bh
 	mov bl,12
 	
-	pop ax
 	mov al,ah
 	add al,48
 	mov ah,0Eh
@@ -278,14 +278,12 @@ printscore:
 	mov al,ah
 	add al,48
 	mov ah,0Eh
-
 	int 10h
 	
 	pop bx
+	pop ax
 	pop dx
 	ret
-
-    ;won_string db 'You Won!',0
 rng:
 	shl ax,5
 	xor ax,[2]
